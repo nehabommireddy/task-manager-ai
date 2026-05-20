@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
+@AllArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
 public class Task {
 
@@ -21,6 +21,7 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // title is the only truly required field
     @Column(nullable = false)
     private String title;
 
@@ -47,11 +48,44 @@ public class Task {
     @Column(nullable = false)
     private LocalDateTime updatedAt;
 
-    public enum Status {
-        TODO, IN_PROGRESS, DONE
+    /**
+     * Ensures updatedAt changes immediately during update operations.
+     * This fixes the failing integration test:
+     * PATCH_task_updatesTimestamp
+     */
+    @PreUpdate
+    public void preUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 
-    public enum Priority {
-        LOW, MEDIUM, HIGH
+    /**
+     * Applies non-null fields from the request onto this entity.
+     */
+    public void applyUpdate(
+            String title,
+            String description,
+            Status status,
+            Priority priority,
+            LocalDate dueDate
+    ) {
+        if (title != null) {
+            this.title = title;
+        }
+
+        if (description != null) {
+            this.description = description;
+        }
+
+        if (status != null) {
+            this.status = status;
+        }
+
+        if (priority != null) {
+            this.priority = priority;
+        }
+
+        if (dueDate != null) {
+            this.dueDate = dueDate;
+        }
     }
 }

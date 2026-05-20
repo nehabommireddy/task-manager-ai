@@ -1,72 +1,75 @@
 # Task Manager — Spring Boot REST API
 
-A personal task manager REST API built with Java 17, Spring Boot 3, H2, and AI-powered suggestions via the Anthropic API.
+A personal task manager with a REST API, H2 database, and an AI-powered task suggestion endpoint backed by Google Gemini.
 
-## Tech Stack
+## Prerequisites
 
-| Layer | Choice | Why |
-|-------|--------|-----|
-| Language | Java 17 | Records, sealed classes, text blocks |
-| Framework | Spring Boot 3.2 | Auto-config, JPA, Validation, MVC |
-| Database | H2 (in-memory) | Zero setup, reset on restart |
-| Migrations | Flyway | Versioned schema, reproducible |
-| Lombok | Yes | Reduces boilerplate in entity |
-| AI | Anthropic claude-sonnet-4 | Via direct REST call |
-| Tests | JUnit 5 + Mockito + MockMvc | Unit + integration |
-
-## Project Structure
-
-```
-src/
-├── main/
-│   ├── java/com/example/taskmanager/
-│   │   ├── TaskManagerApplication.java
-│   │   ├── config/          AppConfig.java (RestTemplate, CORS)
-│   │   ├── controller/      TaskController.java, AiController.java
-│   │   ├── domain/
-│   │   │   ├── dto/         TaskDtos.java  (Java records)
-│   │   │   └── entity/      Task.java
-│   │   ├── exception/       TaskNotFoundException, GlobalExceptionHandler
-│   │   ├── repository/      TaskRepository.java
-│   │   └── service/         TaskService.java, AiService.java
-│   └── resources/
-│       ├── application.properties
-│       ├── static/index.html          (minimal frontend)
-│       └── db/migration/V1__*.sql
-└── test/
-    ├── java/com/example/taskmanager/
-    │   ├── controller/      AiControllerTest.java
-    │   ├── service/         TaskServiceTest.java
-    │   └── integration/     TaskControllerIntegrationTest.java
-    └── resources/application-test.properties
-```
-
-## Getting Started
-
-### Prerequisites
 - Java 17+
-- Maven 3.8+
-- An Anthropic API key (for the AI endpoint)
+- Maven 3.8+ (or use the included `./mvnw` wrapper)
 
-### Run
+No external database or services are required. The app runs fully offline — the AI endpoint returns a static fallback response when no API key is configured.
+
+## Quick Start
 
 ```bash
-# Set your API key (or edit application.properties directly)
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# Build and run
+# Clone and run — no API key needed to start
 ./mvnw spring-boot:run
+
+# If mvnw isn't executable: chmod +x mvnw
+# Or use Maven directly if installed: mvn spring-boot:run
 ```
 
 The app starts on **http://localhost:8080**
 
-- Frontend UI: http://localhost:8080
-- H2 console:  http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:mem:taskdb`)
+- **Frontend UI** — http://localhost:8080
+- **H2 console** — http://localhost:8080/h2-console (JDBC URL: `jdbc:h2:mem:taskdb`, no password)
 
-### Run Tests
+## Environment Variables
+
+| Variable | Required | Description |
+|---|---|---|
+| `GEMINI_API_KEY` | No | Enables live AI suggestions. Get a free key at [aistudio.google.com](https://aistudio.google.com/apikey) |
+
+```bash
+# Run with AI suggestions enabled
+export GEMINI_API_KEY=your-key-here
+./mvnw spring-boot:run
+```
+
+When `GEMINI_API_KEY` is not set, the `POST /api/tasks/suggest` endpoint returns a static set of example suggestions so the rest of the application remains fully functional.
+
+## Running Tests
 
 ```bash
 ./mvnw test
+```
+
+Tests use an in-memory H2 database and mock all external dependencies. No API key or network access is required.
+
+## Project Structure
+
+```
+src/main/java/com/example/taskmanager/
+├── controller/      TaskController.java, AiController.java
+├── service/         TaskService.java, AiService.java
+├── repository/      TaskRepository.java
+├── domain/
+│   ├── entity/      Task.java, Status.java, Priority.java
+│   └── dto/         TaskDtos.java, AiDtos.java
+├── exception/       GlobalExceptionHandler.java, TaskNotFoundException.java
+└── config/          AppConfig.java
+
+src/main/resources/
+├── application.properties
+├── static/index.html          # Minimal single-page frontend
+└── db/migration/V1__*.sql     # Flyway schema
+
+src/test/
+├── integration/    TaskControllerIntegrationTest.java   # Full stack via MockMvc + H2
+├── controller/     AiControllerTest.java                # MVC slice, AiService mocked
+└── service/        TaskServiceTest.java                 # Unit tests, repository mocked
+                    AiServiceHttpTest.java               # HTTP layer, RestTemplate mocked
+                    AiServiceParsingTest.java            # Parser unit tests, no HTTP
 ```
 
 ## API Reference
@@ -74,54 +77,156 @@ The app starts on **http://localhost:8080**
 ### Tasks
 
 | Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/tasks` | List all tasks (optional: `?status=TODO&priority=HIGH`) |
-| GET | `/api/tasks/{id}` | Get a task by ID |
-| POST | `/api/tasks` | Create a task |
-| PATCH | `/api/tasks/{id}` | Partially update a task |
-| DELETE | `/api/tasks/{id}` | Delete a task |
+|---|---|---|
+| `GET` | `/api/tasks` | List tasks. Filter with `?status=TODO&priority=HIGH` |
+| `GET` | `/api/tasks/{id}` | Get a task by ID |
+| `POST` | `/api/tasks` | Create a task |
+| `PUT` | `/api/tasks/{id}` | Replace a task (all fields overwritten or reset to defaults) |
+| `PATCH` | `/api/tasks/{id}` | Partially update a task (only provided fields change) |
+| `DELETE` | `/api/tasks/{id}` | Delete a task |
 
-#### Create Task (POST /api/tasks)
+**Create task**
 ```json
+POST /api/tasks
 {
-  "title": "Buy groceries",
-  "description": "Milk, eggs, bread",
-  "status": "TODO",
+  "title": "Write release notes",
+  "description": "Cover all changes since v1.2",
   "priority": "HIGH",
-  "dueDate": "2025-12-31"
+  "dueDate": "2025-12-01"
 }
 ```
+Valid `status` values: `TODO` `IN_PROGRESS` `DONE` (default: `TODO`)  
+Valid `priority` values: `LOW` `MEDIUM` `HIGH` (default: `MEDIUM`)
 
-Valid `status` values: `TODO`, `IN_PROGRESS`, `DONE`  
-Valid `priority` values: `LOW`, `MEDIUM`, `HIGH`
-
-#### Update Task (PATCH /api/tasks/{id})
-All fields optional — only provided fields are updated:
+**Replace task (PUT)** — all fields overwritten; omitted fields reset to entity defaults
 ```json
-{
-  "status": "IN_PROGRESS"
-}
+PUT /api/tasks/1
+{ "title": "Revised title" }
+```
+
+**Partial update (PATCH)** — only provided fields change; omitted fields are left unchanged
+```json
+PATCH /api/tasks/1
+{ "status": "DONE" }
+```
+
+**Error responses** follow a consistent envelope:
+```json
+{ "status": 404, "message": "Task not found with id: 99", "timestamp": "..." }
+```
+Validation errors include a field map:
+```json
+{ "status": 400, "message": "Validation failed", "errors": { "title": "Title is required" }, "timestamp": "..." }
 ```
 
 ### AI Suggestions
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/ai/suggest` | Get AI-generated task breakdown |
-
-```json
-{ "prompt": "I need to plan a product launch for Q4" }
+```
+POST /api/tasks/suggest
 ```
 
-Response:
+Accepts a free-text goal and returns 3–5 structured, actionable sub-tasks generated by Gemini 1.5 Flash.
+
+**Request**
 ```json
-{ "suggestion": "1. Define launch goals\n2. ..." }
+{ "prompt": "Plan a company offsite for 30 people" }
+```
+
+**Response**
+```json
+{
+  "suggestions": [
+    {
+      "title": "Choose a venue and confirm availability",
+      "reason": "Venue capacity and dates constrain every other decision."
+    },
+    {
+      "title": "Set an agenda with clear goals",
+      "reason": "A defined agenda prevents the offsite from becoming an unfocused social event."
+    },
+    {
+      "title": "Arrange travel and accommodation for attendees",
+      "reason": "Early booking reduces cost and ensures everyone can attend."
+    }
+  ]
+}
+```
+
+**Fallback behaviour** — when `GEMINI_API_KEY` is not configured, the endpoint returns 200 with a static example response in the **same JSON structure** as a live response. No error is thrown. The reasons in the fallback responses include an `(Example response — set GEMINI_API_KEY for live suggestions.)` label so reviewers can distinguish them from real AI output.
+
+```json
+{
+  "suggestions": [
+    {
+      "title": "Set a clear goal and deadline",
+      "reason": "(Example response — set GEMINI_API_KEY for live suggestions.) A specific target with a date makes progress measurable."
+    },
+    {
+      "title": "Break the goal into weekly milestones",
+      "reason": "(Example response.) Smaller checkpoints reveal blockers early."
+    },
+    {
+      "title": "Identify the single most important task for today",
+      "reason": "(Example response.) One prioritised action prevents the paralysis of an undifferentiated list."
+    }
+  ]
+}
 ```
 
 ## Design Notes
 
-- **DTOs as Java records** — immutable, concise, no boilerplate
-- **Partial updates via PATCH** — only non-null fields are applied
-- **`@ControllerAdvice`** — all errors return consistent JSON: `{status, message, timestamp}`
-- **AiService is isolated** — uses a plain `RestTemplate` call, easy to mock in unit tests
-- **Flyway** — schema is in `V1__create_tasks_table.sql`, not Hibernate DDL, so schema changes are auditable
+- **Java 17 records** for all DTOs — immutable, concise, no boilerplate
+- **PATCH semantics** — only non-null fields are applied; `null` means "leave unchanged"
+- **Flyway migrations** — schema in `V1__create_tasks_table.sql`, not Hibernate DDL
+- **Consistent error envelope** — `GlobalExceptionHandler` ensures all errors share the same JSON shape
+- **AiService is isolated** — `parseResponse` is package-private and tested directly, decoupled from HTTP
+
+## Verification Commands
+
+```bash
+# Run all tests
+./mvnw test
+
+# Start the app (no API key needed)
+./mvnw spring-boot:run
+
+# CRUD — create a task
+curl -s -X POST http://localhost:8080/api/tasks \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Buy groceries","priority":"HIGH"}' | jq .
+
+# CRUD — list tasks
+curl -s http://localhost:8080/api/tasks | jq .
+
+# AI endpoint — WITHOUT API key (fallback, always works)
+curl -s -X POST http://localhost:8080/api/tasks/suggest \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Plan a product launch"}' | jq .
+
+# AI endpoint — WITH API key (live Gemini response)
+GEMINI_API_KEY=your-key-here ./mvnw spring-boot:run &
+curl -s -X POST http://localhost:8080/api/tasks/suggest \
+  -H "Content-Type: application/json" \
+  -d '{"prompt":"Plan a product launch"}' | jq .
+```
+
+
+## Debugging / Stability Fixes Applied
+
+The runtime failures were caused by a backend persistence bug:
+
+- `TaskService#createTask()` explicitly passed `null` into the Lombok builder for `status`
+- This overrode the entity `@Builder.Default`
+- Hibernate attempted to insert `NULL` into a NOT NULL database column
+- The exception was swallowed by generic exception handling, producing only:
+  `An unexpected error has occurred`
+
+Fixes included:
+
+- Correct handling of default enum values
+- Improved exception logging
+- Added database constraint error handling
+- Verified frontend payloads match backend DTOs
+- Confirmed Gemini fallback behavior works when no API key is configured
+- Confirmed no Anthropic/Claude remnants remain in the codebase
+

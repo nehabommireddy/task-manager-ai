@@ -1,28 +1,36 @@
 package com.example.taskmanager.controller;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import com.example.taskmanager.domain.dto.TaskDtos.*;
+import com.example.taskmanager.domain.dto.AiDtos.AiSuggestRequest;
+import com.example.taskmanager.domain.dto.AiDtos.AiSuggestResponse;
 import com.example.taskmanager.service.AiService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
+@CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/api/ai")
+@RequestMapping("/api/tasks")
 @RequiredArgsConstructor
 public class AiController {
 
     private final AiService aiService;
 
     /**
-     * POST /api/ai/suggest
+     * POST /api/tasks/suggest
      *
-     * Accepts a free-text prompt and returns AI-generated task suggestions.
-     * Example body: { "prompt": "I need to plan a product launch" }
+     * Accepts a free-text goal and returns structured task suggestions.
      */
     @PostMapping("/suggest")
-    public ResponseEntity<AiSuggestResponse> suggest(@Valid @RequestBody AiSuggestRequest request) {
-        String suggestion = aiService.getSuggestion(request.prompt());
-        return ResponseEntity.ok(new AiSuggestResponse(suggestion));
-    }
+        public ResponseEntity<AiSuggestResponse> suggest(
+                @RequestBody @Valid AiSuggestRequest request
+        ) {
+            return ResponseEntity.ok(aiService.getSuggestions(request.prompt()));
+        }
 }
+

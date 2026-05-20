@@ -1,0 +1,6 @@
+com\example\taskmanager\service\AiServiceHttpTest.class
+com\example\taskmanager\service\TaskServiceTest.class
+com\example\taskmanager\controller\AiControllerTest.class
+com\example\taskmanager\integration\TaskControllerIntegrationTest.class
+com\example\taskmanager\integration\AiEndpointIntegrationTest.class
+com\example\taskmanager\service\AiServiceParsingTest.class

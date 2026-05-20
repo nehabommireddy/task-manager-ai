@@ -1,0 +1,14 @@
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\config\AppConfig.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\controller\AiController.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\controller\TaskController.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\domain\dto\AiDtos.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\domain\dto\TaskDtos.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\domain\entity\Priority.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\domain\entity\Status.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\domain\entity\Task.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\exception\GlobalExceptionHandler.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\exception\TaskNotFoundException.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\repository\TaskRepository.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\service\AiService.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\service\TaskService.java
+C:\Internships\Projects\task-manager\src\main\java\com\example\taskmanager\TaskManagerApplication.java
